@@ -99,3 +99,9 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+# Custom stuff
+/input/*
+/output/*
+!/input/.gitkeep
+!/output/.gitkeep
