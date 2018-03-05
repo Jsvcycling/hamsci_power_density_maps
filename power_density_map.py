@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import os
+
 import cartopy.io.shapereader as shapereader
 import matplotlib.pyplot as plt
 import mysql.connector as mysql
@@ -22,6 +24,9 @@ MYSQL_DATABASE = 'pwr_density_map_data'
 MAP_RES  = '110m'
 MAP_TYPE = 'physical'
 MAP_NAME = 'land'
+
+INPUT_DIR  = 'input'
+OUTPUT_DIR = 'output'
 
 shape_data = shapereader.natural_earth(resolution=MAP_RES, category=MAP_TYPE,
                                        name=MAP_NAME)
@@ -74,7 +79,20 @@ def is_over_land(lat, lon):
     return False
 
 def main():
-    print(is_over_land(30, -80))
+    # TODO: Load in every trace file.
+    print('Loading input...', end='', flush=True)
+    print('Done.')
+
+    # TODO: Compute midpoint obscuration for each (split it up and use
+    # multhithreading to speed up).
+    print('Computing midpoint obscurations...', end='', flush=True)
+    print('Done.')
+
+    #TODO: Create a matplotlib figure.
+
+    # TODO: Plot the output and save.
+    print('Plotting results...', end='', flush=True)
+    print('Done.')
 
 if __name__ == '__main__':
     main()
