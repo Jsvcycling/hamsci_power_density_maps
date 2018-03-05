@@ -13,9 +13,6 @@ from eclipse_calc import calculate_obscuration as calc_obsc
 # Import geographiclib (for midpoint calculator)
 from geographiclib.geodesic import Geodesic
 
-# Use population density to mask out oceans, etc.
-USE_POPDENSITY = True
-
 # MySQL credentials
 MYSQL_USERNAME = 'hamsci'
 MYSQL_PASSWORD = 'hamscience'
