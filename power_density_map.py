@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
+import cartopy.io.shapereader as shapereader
+import matplotlib.pyplot as plt
+import mysql.connector as mysql
 import numpy as np
 import pandas as pd
-
-import matplotlib.pyplot as plt
-
-import mysql.connector as mysql
+import shapely.geometry as sgeom
 
 # TODO: we need to import the eclipse calculator stuff.
 
@@ -17,6 +17,14 @@ MYSQL_USERNAME = 'hamsci'
 MYSQL_PASSWORD = 'hamscience'
 MYSQL_HOST     = 'localhost'
 MYSQL_DATABASE = 'pwr_density_map_data'
+
+MAP_RES  = '110m'
+MAP_TYPE = 'physical'
+MAP_NAME = 'land'
+
+shape_data = shapereader.natural_earth(resolution=MAP_RES, category=MAP_TYPE,
+                                       name=MAP_NAME)
+lands = shapereader.Reader(shape_data).geometries()
 
 # Connect to the database
 db = mysql.connector.connect(username=MYSQL_USERNAME, password=MYSQL_PASSWORD,
@@ -40,3 +48,11 @@ except Exception as e:
 # database, calculate it and insert it into the database.
 def get_midpoint_obscuration(lat, lon, alt):
     pass
+
+# Check if a point is over land.
+def is_over_land(lat, lon):
+    for land in lands:
+        if land.contains(sgeom.Point(lat, lon)): return True
+
+    # If it wasn't found, return False.
+    return False
