@@ -2,6 +2,9 @@
 
 import os
 
+import matplotlib as mpl
+mpl.use('Agg')
+
 import cartopy.io.shapereader as shapereader
 import matplotlib.pyplot as plt
 import mysql.connector as mysql
@@ -73,6 +76,8 @@ def get_midpoint_obscuration(ut_time, lat1, lon1, lat2, lon2, alt):
         time, altitude, value) VALUES (%s, %s, %s, %s, %s)''')
 
         cursor.execute(insert, (mid[0], mid[1], ut_time, alt, obsc))
+
+        return obsc
     else:
         return row[0]
 
@@ -96,8 +101,14 @@ def main():
 
     #TODO: Create a matplotlib figure.
 
+    f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(20, 20), dpi=200)
+    
+    axes = [ax1, ax2, ax3, ax4]
+
     print('Plotting results...', end='', flush=True)
-    # TODO: Plot the output and save.
+    # TODO: Plot results
+    
+    f.savefig(os.path.join(OUTPUT_DIR, 'power_density_map.png'))
     print('Done.')
 
 if __name__ == '__main__':
