@@ -10,7 +10,7 @@ import pandas as pd
 import shapely.geometry as sgeom
 
 # Import the obscuration calculator
-# from eclipse_calc import calculate_obscuration as calc_obsc
+from eclipse_calculator.eclipse_calc import calculate_obscuration as calc_obsc
 
 # Import geographiclib (for midpoint calculator)
 from geographiclib.geodesic import Geodesic
@@ -58,7 +58,7 @@ except Exception as e:
 def get_midpoint_obscuration(ut_time, lat1, lon1, lat2, lon2, alt):
     line = Geodesic.WGS84.InverseLine(lat1, lon1, lat2, lon2)
     mid  = line.Position(0.5 * line.s13)
-
+    
     query = ('''SELECT value FROM midpnt_obsc WHERE
     latitude=%s AND longitude=%s AND time=%s AND altitude=%s
     LIMIT 1''')
@@ -66,15 +66,15 @@ def get_midpoint_obscuration(ut_time, lat1, lon1, lat2, lon2, alt):
     cursor.execute(query, (mid[0], mid[1], ut_time, alt))
     row = cursor.fetchone()
 
-    # if row == None:
-    #     obsc = calc_obsc(ut_time, mid[0], mid[1], alt * 1000)
+    if row == None:
+        obsc = calc_obsc(ut_time, mid[0], mid[1], alt * 1000)
 
-    #     insert = ('''INSERT INTO midpnt_obsc (latitude, longitude,
-    #     time, altitude, value) VALUES (%s, %s, %s, %s, %s)''')
+        insert = ('''INSERT INTO midpnt_obsc (latitude, longitude,
+        time, altitude, value) VALUES (%s, %s, %s, %s, %s)''')
 
-    #     cursor.execute(insert, (mid[0], mid[1], ut_time, alt, obsc))
-    # else:
-    #     return row[0]
+        cursor.execute(insert, (mid[0], mid[1], ut_time, alt, obsc))
+    else:
+        return row[0]
 
 # Check if a point is over land.
 def is_over_land(lat, lon):

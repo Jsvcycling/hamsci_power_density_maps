@@ -1,0 +1,3 @@
+[submodule "eclipse_calculator"]
+	path = eclipse_calculator
+	url = git@github.com:w2naf/eclipse_calculator.git
