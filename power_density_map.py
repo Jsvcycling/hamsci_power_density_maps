@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import datetime
+import glob
 import os
 
 import matplotlib as mpl
@@ -28,7 +30,8 @@ MAP_RES  = '110m'
 MAP_TYPE = 'physical'
 MAP_NAME = 'land'
 
-INPUT_DIR  = 'input'
+INPUT_DIR  = os.path.join('/', 'home', 'vega', 'Documents',
+                          'hamsci_conf_2017_out', 'traces')
 OUTPUT_DIR = 'output'
 
 shape_data = shapereader.natural_earth(resolution=MAP_RES, category=MAP_TYPE,
@@ -89,10 +92,62 @@ def is_over_land(lat, lon):
     # If it wasn't found, return False.
     return False
 
+# Load in all trace files into a pandas DataFrame.
+def load_traces(input_dir):
+    models = { 'base': os.path.join(input_dir, 'base'),
+               'eclipse': os.path.join(input_dir, 'eclipse') }
+
+    df = pd.DataFrame()
+
+    for name, folder in models.items():
+        print('Loading {} traces:'.format(name))
+        
+        # Get all the CSV files from the selected directory.
+        files = glob.glob(os.path.join(folder, 'simulated_*.csv'))
+
+        for idx, f in enumerate(files):
+            print('    {}'.format(f))
+
+            if name == 'eclipse':
+                timestamp = datetime.datetime.strptime(
+                    f[-23:-4],
+                    '%Y-%m-%d %H:%M:%S'
+                )
+            elif name == 'base':
+                timestamp = datetime.datetime.strptime(
+                    f[-23:-4],
+                    '%Y-%m-%d %H:%M:%S'
+                )
+            else:
+                raise Exception('Whoops...')
+            
+            df_tmp = pd.read_csv(f, header=0, index_col=False)
+
+            df_tmp['datetime'] = timestamp
+            df_tmp['ionosphere'] = name
+
+            df_tmp = df_tmp.drop([
+                'srch_rd_phase_path',
+                'srch_rd_plasma_freq_at_apogee',
+                'srch_rd_virtual_height',
+                'srch_rd_effective_range',
+                'srch_rd_deviative_absorption',
+                'srch_rd_TEC_path',
+                'srch_rd_Doppler_shift',
+                'srch_rd_Doppler_spread',
+                'srch_rd_frequency',
+                'srch_rd_FAI_backscatter_loss'], axis=1)
+
+            df = df.append(df_tmp, ignore_index=True)
+        
+        print('Done.')
+    return df
+
 def main():
-    print('Loading input...', end='', flush=True)
-    # TODO: Load in every trace file.
-    print('Done.')
+    df = load_traces(INPUT_DIR)
+
+    print(df.size)
+    exit()
     
     print('Computing midpoint obscurations...', end='', flush=True)
     # TODO: Compute midpoint obscuration for each (split it up and use
