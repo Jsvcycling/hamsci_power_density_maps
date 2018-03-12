@@ -2,6 +2,7 @@
 
 import datetime
 import glob
+import math
 import os
 
 import matplotlib as mpl
@@ -59,6 +60,39 @@ except Exception as e:
     print(e)
     exit()
 
+# Get the obscuration for a single point.
+def get_obsc(ut_time, lat, lon, alt):
+    query = ('''SELECT value FROM midpnt_obsc WHERE
+    latitude=%s AND longitude=%s AND time=%s AND altitude=%s
+    LIMIT 1''')
+
+    ut_time = ut_time.to_pydatetime()
+    lat     = float(lat)
+    lon     = float(lon)
+    alt     = float(alt)
+
+    cursor.execute(query, (lat, lon, ut_time, alt))
+    row = cursor.fetchone()
+
+    if row == None:
+        obsc = calc_obsc(ut_time, lat, lon, alt * 1000)
+
+        obsc = float(obsc)
+
+        if math.isnan(obsc):
+            print('Found NaN')
+            return obsc
+
+        insert = ('''INSERT INTO midpnt_obsc (latitude, longitude,
+        time, altitude, value) VALUES (%s, %s, %s, %s, %s)''')
+
+        cursor.execute(insert, (lat, lon, ut_time, alt, obsc))
+        db.commit()
+
+        return obsc
+    else:
+        return row[0]
+
 # Lookup the midpoint obscuration of the midpoint. If it doesn't exist in the
 # database, calculate it and insert it into the database.
 def get_midpoint_obscuration(ut_time, lat1, lon1, lat2, lon2, alt):
@@ -93,7 +127,7 @@ def is_over_land(lat, lon):
     return False
 
 # Load in all trace files into a pandas DataFrame.
-def load_traces(input_dir):
+def load_traces(input_dir, verbose=False):
     models = { 'base': os.path.join(input_dir, 'base'),
                'eclipse': os.path.join(input_dir, 'eclipse') }
 
@@ -106,7 +140,8 @@ def load_traces(input_dir):
         files = glob.glob(os.path.join(folder, 'simulated_*.csv'))
 
         for idx, f in enumerate(files):
-            print('    {}'.format(f))
+            if verbose:
+                print('    {}'.format(f))
 
             if name == 'eclipse':
                 timestamp = datetime.datetime.strptime(
@@ -123,7 +158,7 @@ def load_traces(input_dir):
             
             df_tmp = pd.read_csv(f, header=0, index_col=False)
 
-            df_tmp['datetime'] = timestamp
+            df_tmp['timestamp'] = timestamp
             df_tmp['ionosphere'] = name
 
             df_tmp = df_tmp.drop([
@@ -139,20 +174,37 @@ def load_traces(input_dir):
                 'srch_rd_FAI_backscatter_loss'], axis=1)
 
             df = df.append(df_tmp, ignore_index=True)
-        
+            
         print('Done.')
+
+    df = df.dropna(subset=['srch_rd_apogee_lat',
+                           'srch_rd_apogee_lon',
+                           'srch_rd_apogee'])
+    
+    return df
+
+def process_traces(df):
+    for idx, row in df.iterrows():
+        apogee_obsc = get_obsc(row.timestamp, row.srch_rd_apogee_lat,
+                               row.srch_rd_apogee_lon, row.srch_rd_apogee)
+
+        df.set_value(idx, 'apogee_obsc', apogee_obsc)
+
+    df = df.dropna(subset=['apogee_obsc'])
+
     return df
 
 def main():
-    df = load_traces(INPUT_DIR)
+    df = load_traces(INPUT_DIR, True)
+
+    print(df.size)
+    
+    print('Computing midpoint obscurations...', end='', flush=True)
+    df = process_traces(df)
+    print('Done.')
 
     print(df.size)
     exit()
-    
-    print('Computing midpoint obscurations...', end='', flush=True)
-    # TODO: Compute midpoint obscuration for each (split it up and use
-    # multhithreading to speed up).
-    print('Done.')
 
     #TODO: Create a matplotlib figure.
 
