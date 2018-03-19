@@ -4,11 +4,13 @@ import datetime
 import glob
 import math
 import os
+import pickle
 
 import matplotlib as mpl
 mpl.use('Agg')
 
 import cartopy.io.shapereader as shapereader
+import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import mysql.connector as mysql
 import numpy as np
@@ -185,33 +187,51 @@ def load_traces(input_dir, verbose=False):
 
 def process_traces(df):
     for idx, row in df.iterrows():
-        apogee_obsc = get_obsc(row.timestamp, row.srch_rd_apogee_lat,
-                               row.srch_rd_apogee_lon, row.srch_rd_apogee)
+        apogee_obsc_val = get_obsc(row.timestamp, row.srch_rd_apogee_lat,
+                                   row.srch_rd_apogee_lon, row.srch_rd_apogee)
 
-        df.set_value(idx, 'apogee_obsc', apogee_obsc)
+        df.ix[idx, 'apogee_obsc'] = apogee_obsc_val
 
     df = df.dropna(subset=['apogee_obsc'])
 
     return df
 
 def main():
-    df = load_traces(INPUT_DIR, True)
+    cache = True
 
-    print(df.size)
+    if not cache:
+        df = load_traces(INPUT_DIR, True)
+        
+        print('Computing midpoint obscurations...', end='', flush=True)
+        df = process_traces(df)
+        print('Done.')
+
+        # Cache the results.
+        with open(os.path.join(OUTPUT_DIR, 'cache', 'pwr_density_map_cache.p'),
+                  'wb') as f:
+            pickle.dump(df, f)
+    else:
+        with open(os.path.join(OUTPUT_DIR, 'cache', 'pwr_density_map_cache.p'),
+                  'rb') as f:
+            df = pickle.load(f)
+
+    print(df.shape)
+
+    # TODO: I feel like there needs to be more work done before plotting...
+
+    # Create a matplotlib figure.
+
+    f = plt.figure(figsize=(20, 20), dpi=200)
+
+    grid = gridspec.GridSpec(2, 2)
+
+    ax1 = plt.subplot(grid[0])  # 7 MHz Control
+    ax2 = plt.subplot(grid[1])  # 14 MHz Control
+    ax3 = plt.subplot(grid[2])  # 7 MHz Eclipse
+    ax4 = plt.subplot(grid[3])  # 14 MHz Eclipse
+
+    groups = df.groupby(['freq', 'ionosphere'])
     
-    print('Computing midpoint obscurations...', end='', flush=True)
-    df = process_traces(df)
-    print('Done.')
-
-    print(df.size)
-    exit()
-
-    #TODO: Create a matplotlib figure.
-
-    f, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(20, 20), dpi=200)
-    
-    axes = [ax1, ax2, ax3, ax4]
-
     print('Plotting results...', end='', flush=True)
     # TODO: Plot results
     
